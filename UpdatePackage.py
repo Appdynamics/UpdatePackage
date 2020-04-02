@@ -7,6 +7,7 @@ Usage: python UpdatePackage.py [options] package_path
 Options:
     -h, --help                              show this help
     -s, --simulate                          simulate the update without saving the result to disk
+    -i ..., --input=...                     [path/]name of the input file if not UpdatePackage.properites
 
 '''
 
@@ -15,21 +16,20 @@ __author__ = 'Charles J. Lin <charles.lin@appdynamics.com>'
 import getopt
 import sys
 import os
+import fileinput
 
 import lxml.etree as ET             # lxml.etree keeps comments intact vs. xml.etree
 from jproperties import Properties
-import fileinput
 
 IS_SIMULATION = False
 
 def usage():
     print (__doc__)
 
-def read_properties():
-    property_file_name = os.path.splitext(os.path.basename(sys.argv[0]))[0] + '.properties'
+def read_properties(input_file_name):
 
     p = Properties()
-    with open(property_file_name, 'rb') as f:
+    with open(input_file_name, 'rb') as f:
         p.load(f)
 
     return p
@@ -98,9 +98,10 @@ def update_properties(file_path, prop):
 
 def main():
     global IS_SIMULATION
+    input_file_name = ''
 
     try: 
-        opts, args = getopt.getopt(sys.argv[1:], 'hs', ['help','simulate'])
+        opts, args = getopt.getopt(sys.argv[1:], 'hsi:', ['help','simulate','input='])
     except getopt.GetoptError as err:
         print(err)
         usage()
@@ -116,6 +117,8 @@ def main():
             sys.exit()
         elif opt in ('-s', '--simulate'):
             IS_SIMULATION = True
+        elif opt in ('-i', '--input'):
+            input_file_name = arg
         else:
             assert False, 'unhandled option'
 
@@ -126,7 +129,10 @@ def main():
 
     xml_to_update, property_to_update = walk_directory(args[0])
 
-    prop = read_properties()
+    if input_file_name =='':
+        input_file_name = os.path.splitext(os.path.basename(sys.argv[0]))[0] + '.properties'
+
+    prop = read_properties(input_file_name)
 
     for f in xml_to_update:
         update_controller_info(f, prop)
